@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BLE Notification Test</title>
+</head>
+<body>
+    <h1>BLE Notification Test</h1>
+    <button id="connectButton">Connect to BLE Device</button>
+    <p id="status">Status: Not connected</p>
+    <p id="data">Received Data: None</p>
+
+    <script>
+        let bleDevice;
+        let bleCharacteristic;
+
+        document.getElementById('connectButton').addEventListener('click', connectToDevice);
+
+        async function connectToDevice() {
+            try {
+                console.log(1);
+                document.getElementById('status').textContent = 'Status: Requesting Bluetooth Device...';
+                bleDevice = await navigator.bluetooth.requestDevice({
+                    filters: [{ services: ['4fafc201-1fb5-459e-8fcc-c5c9c331914b'] }]
+                });
+                console.log(2);
+
+                document.getElementById('status').textContent = 'Status: Connecting to GATT Server...';
+                const server = await bleDevice.gatt.connect();
+                console.log(3);
+
+                document.getElementById('status').textContent = 'Status: Getting Service...';
+                const service = await server.getPrimaryService('4fafc201-1fb5-459e-8fcc-c5c9c331914b');
+                console.log(4);
+
+                document.getElementById('status').textContent = 'Status: Getting Characteristic...';
+                bleCharacteristic = await service.getCharacteristic('19b10015-e8f2-537e-4f6c-d104768a1214');
+                startChar = await service.getCharacteristic('19b10013-e8f2-537e-4f6c-d104768a1214')
+                const encoder = new TextEncoder();
+                const value1 = encoder.encode('1');
+
+                // Write the value to the characteristic
+                await startChar.writeValue(value1);
+
+                console.log(5);
+                document.getElementById('status').textContent = 'Status: Starting Notifications...';
+                // await bleCharacteristic.startNotifications();
+                read(bleCharacteristic);
+                console.log(6);
+                // bleCharacteristic.addEventListener('characteristicvaluechanged', handleCharacteristicValueChanged);
+                console.log(7);
+                document.getElementById('status').textContent = 'Status: Notifications started. Waiting for data...';
+            } catch (error) {
+                console.error('Error:', error);
+                document.getElementById('status').textContent = `Status: Error - ${error.message}`;
+            }
+        }
+
+        function handleCharacteristicValueChanged(event) {
+            const value = event.target.value;
+            const decoder = new TextDecoder('utf-8');
+            const decodedValue = decoder.decode(value);
+
+            console.log('Received Value:', decodedValue);
+            document.getElementById('data').textContent = `Received Data: ${decodedValue}`;
+        }
+        function sleep(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+        async function read(bleCharacteristic){
+            var i = 0;
+            while(i < 1000) {
+                i++;
+                let rv = await bleCharacteristic.readValue();
+                // console.log('read value: ', rv);
+                const decoder = new TextDecoder('utf-8');
+                const decodedValue = decoder.decode(rv);
+                if(decodedValue!= "000000"){
+                console.log('Received Value:', decodedValue);
+                document.getElementById('data').textContent = `Received Data: ${decodedValue}`;}
+                await sleep(100);
+            }
+        }
+    </script>
+</body>
+</html>
